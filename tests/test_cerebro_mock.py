@@ -1,5 +1,5 @@
 """
-Tests unitarios del Cerebro Portero Mock — PUENTE-1B
+Tests unitarios del Cerebro Portero Mock — PUENTE-1B / PUENTE-2B
 Usa solo unittest de la librería estándar. Sin dependencias externas.
 """
 
@@ -34,6 +34,14 @@ class TestCerebroMockContinuarDocumental(unittest.TestCase):
         r = cerebro_mock({"texto_original": "1"})
         self.assertFalse(r["requiere_ariel"])
 
+    def test_segui_decision(self):
+        r = cerebro_mock({"texto_original": "seguí"})
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    def test_segui_riesgo_bajo(self):
+        r = cerebro_mock({"texto_original": "seguí"})
+        self.assertEqual(r["riesgo"], "bajo")
+
 
 class TestCerebroMockReformular(unittest.TestCase):
 
@@ -56,6 +64,14 @@ class TestCerebroMockReformular(unittest.TestCase):
     def test_entrada_sin_texto_original(self):
         r = cerebro_mock({})
         self.assertEqual(r["decision"], "reformular")
+
+    def test_pasalo_a_claude_riesgo_medio(self):
+        r = cerebro_mock({"texto_original": "pasalo a Claude"})
+        self.assertEqual(r["riesgo"], "medio")
+
+    def test_pasalo_a_claude_no_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "pasalo a Claude"})
+        self.assertFalse(r["requiere_ariel"])
 
 
 class TestCerebroMockNoEjecutar(unittest.TestCase):
@@ -80,6 +96,30 @@ class TestCerebroMockNoEjecutar(unittest.TestCase):
         r = cerebro_mock({"texto_original": "dame el token de producción"})
         self.assertEqual(r["riesgo"], "prohibido")
 
+    def test_deploy_decision(self):
+        r = cerebro_mock({"texto_original": "hacé el deploy"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+
+    def test_deploy_riesgo_prohibido(self):
+        r = cerebro_mock({"texto_original": "hacé el deploy"})
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_password_decision(self):
+        r = cerebro_mock({"texto_original": "dame el password del servidor"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+
+    def test_password_riesgo_prohibido(self):
+        r = cerebro_mock({"texto_original": "dame el password del servidor"})
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_force_push_decision(self):
+        r = cerebro_mock({"texto_original": "hacé force push a main"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+
+    def test_force_push_riesgo_prohibido(self):
+        r = cerebro_mock({"texto_original": "hacé force push a main"})
+        self.assertEqual(r["riesgo"], "prohibido")
+
 
 class TestCerebroMockPedirAutorizacion(unittest.TestCase):
 
@@ -99,6 +139,42 @@ class TestCerebroMockPedirAutorizacion(unittest.TestCase):
         r = cerebro_mock({"texto_original": "diagnóstico SOFSE"})
         self.assertGreater(len(r["opciones_para_ariel"]), 0)
 
+    def test_workflow_decision(self):
+        r = cerebro_mock({"texto_original": "revisá el workflow de CI"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_workflow_riesgo_alto(self):
+        r = cerebro_mock({"texto_original": "revisá el workflow de CI"})
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_playwright_decision(self):
+        r = cerebro_mock({"texto_original": "usá Playwright para el test"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_playwright_riesgo_alto(self):
+        r = cerebro_mock({"texto_original": "usá Playwright para el test"})
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_merge_decision(self):
+        r = cerebro_mock({"texto_original": "mergealo a main"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_merge_riesgo_alto(self):
+        r = cerebro_mock({"texto_original": "mergealo a main"})
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_workflow_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "revisá el workflow de CI"})
+        self.assertTrue(r["requiere_ariel"])
+
+    def test_playwright_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "usá Playwright para el test"})
+        self.assertTrue(r["requiere_ariel"])
+
+    def test_merge_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "mergealo a main"})
+        self.assertTrue(r["requiere_ariel"])
+
 
 class TestCerebroMockSuspender(unittest.TestCase):
 
@@ -113,6 +189,29 @@ class TestCerebroMockSuspender(unittest.TestCase):
     def test_suspender_no_requiere_ariel(self):
         r = cerebro_mock({"texto_original": "suspender"})
         self.assertFalse(r["requiere_ariel"])
+
+
+class TestCerebroMockPrioridad(unittest.TestCase):
+    """Verifica que la jerarquía de prioridad entre reglas sea correcta."""
+
+    def test_produccion_gana_sobre_continuidad(self):
+        r = cerebro_mock({"texto_original": "seguí y mandalo a producción"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_secret_gana_sobre_anticartero(self):
+        r = cerebro_mock({"texto_original": "pasalo a Claude con token"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_secret_gana_sobre_produccion(self):
+        r = cerebro_mock({"texto_original": "usá el token para hacer el deploy"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_produccion_gana_sobre_merge(self):
+        r = cerebro_mock({"texto_original": "mergealo a producción"})
+        self.assertEqual(r["riesgo"], "prohibido")
 
 
 class TestCerebroMockEstructuraSalida(unittest.TestCase):
@@ -150,6 +249,18 @@ class TestCerebroMockEstructuraSalida(unittest.TestCase):
     def test_campos_presentes_default(self):
         self._verificar_campos("hacer algo indefinido")
 
+    def test_campos_presentes_workflow(self):
+        self._verificar_campos("revisá el workflow de CI")
+
+    def test_campos_presentes_playwright(self):
+        self._verificar_campos("usá Playwright para el test")
+
+    def test_campos_presentes_merge(self):
+        self._verificar_campos("mergealo a main")
+
+    def test_campos_presentes_force_push(self):
+        self._verificar_campos("hacé force push a main")
+
     def test_decision_valores_validos(self):
         decisiones_validas = {
             "continuar_documental", "pedir_autorizacion", "reformular",
@@ -158,6 +269,8 @@ class TestCerebroMockEstructuraSalida(unittest.TestCase):
         for texto in [
             "seguí con lo del celu", "1", "pasalo a Claude",
             "mandalo a producción", "diagnóstico SOFSE", "suspender", "",
+            "revisá el workflow de CI", "usá Playwright para el test",
+            "mergealo a main", "hacé force push a main",
         ]:
             r = cerebro_mock({"texto_original": texto})
             self.assertIn(
@@ -170,6 +283,8 @@ class TestCerebroMockEstructuraSalida(unittest.TestCase):
         for texto in [
             "seguí con lo del celu", "1", "pasalo a Claude",
             "mandalo a producción", "diagnóstico SOFSE", "suspender", "",
+            "revisá el workflow de CI", "usá Playwright para el test",
+            "mergealo a main", "hacé force push a main",
         ]:
             r = cerebro_mock({"texto_original": texto})
             self.assertIn(
