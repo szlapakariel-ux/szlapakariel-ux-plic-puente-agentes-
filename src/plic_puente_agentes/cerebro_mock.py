@@ -1,6 +1,6 @@
 """
-Cerebro Portero Mock — PUENTE-3C-BACKLOG
-Corrección de falsos positivos para keywords ci/prod/action.
+Cerebro Portero Mock — PUENTE-4D-BACKLOG
+Corrección de estados suspendido y mergeado en continuidad.
 Sin API real. Sin Claude Haiku. Sin I/O.
 """
 
@@ -364,6 +364,26 @@ def cerebro_mock(entrada: dict) -> dict:
             motivo="Torre debe reformular la intención antes de transferir para evitar que Ariel actúe como cartero.",
         )
 
+    # B-04 — estado_del_ciclo: suspendido + continuidad
+    if estado == "suspendido" and (
+        texto.strip() == "1" or any(p in texto_lower for p in _PALABRAS_CONTINUIDAD)
+    ):
+        return _respuesta(
+            intencion="Continuación solicitada con ciclo suspendido",
+            confianza="alta",
+            riesgo="medio",
+            decision="pedir_autorizacion",
+            requiere_ariel=True,
+            requiere_torre=True,
+            accion=None,
+            opciones=[
+                "1) Revisar el estado del ciclo suspendido con Ariel antes de continuar",
+                "2) Cerrar el ciclo suspendido y abrir uno nuevo",
+                "3) Mantener suspensión hasta nueva instrucción",
+            ],
+            motivo="estado_del_ciclo es 'suspendido'. Un ciclo suspendido no puede retomarse automáticamente — requiere revisión y autorización explícita de Ariel y Torre antes de continuar.",
+        )
+
     # Prioridad 15 — "1" con/sin opciones previas (cuando contexto_actual está presente)
     if texto.strip() == "1" and contexto is not None:
         ultimo_output = None
@@ -400,6 +420,8 @@ def cerebro_mock(entrada: dict) -> dict:
     if texto.strip() == "1" or any(p in texto_lower for p in _PALABRAS_CONTINUIDAD):
         if estado == "cerrado":
             motivo_cont = "Intención de continuación reconocida. estado_del_ciclo es 'cerrado' — el ciclo anterior está completo. Torre confirma contexto del nuevo ciclo antes de ejecutar."
+        elif estado == "mergeado":
+            motivo_cont = "Intención de continuación reconocida. estado_del_ciclo es 'mergeado' — el ciclo anterior fue mergeado correctamente. Torre confirma contexto del próximo paso documental antes de ejecutar."
         else:
             motivo_cont = "Intención de continuación reconocida. Riesgo bajo. Torre confirma contexto antes de ejecutar."
         return _respuesta(

@@ -544,5 +544,108 @@ class TestCerebroMockFalsoPositivos(unittest.TestCase):
         self.assertEqual(r["riesgo"], "prohibido")
 
 
+class TestCerebroMockEstadosSuspendidoMergeado(unittest.TestCase):
+    """PUENTE-4D-BACKLOG: B-04 estado suspendido + B-05 estado mergeado."""
+
+    # B-04: estado suspendido + continuidad → pedir_autorizacion / medio
+    def test_segui_estado_suspendido_decision(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_segui_estado_suspendido_riesgo(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["riesgo"], "medio")
+
+    def test_continua_estado_suspendido_decision(self):
+        r = cerebro_mock({"texto_original": "continuá", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_continua_estado_suspendido_riesgo(self):
+        r = cerebro_mock({"texto_original": "continuá", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["riesgo"], "medio")
+
+    def test_uno_estado_suspendido_decision(self):
+        r = cerebro_mock({"texto_original": "1", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_uno_estado_suspendido_riesgo(self):
+        r = cerebro_mock({"texto_original": "1", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["riesgo"], "medio")
+
+    def test_suspendido_motivo_menciona_suspendido(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "suspendido"})
+        self.assertIn("suspendido", r["motivo"])
+
+    def test_suspendido_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "suspendido"})
+        self.assertTrue(r["requiere_ariel"])
+
+    def test_suspendido_requiere_torre(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "suspendido"})
+        self.assertTrue(r["requiere_torre"])
+
+    # B-05: estado mergeado + continuidad → continuar_documental / bajo
+    def test_segui_estado_mergeado_decision(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "mergeado"})
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    def test_segui_estado_mergeado_riesgo(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "mergeado"})
+        self.assertEqual(r["riesgo"], "bajo")
+
+    def test_continua_estado_mergeado_decision(self):
+        r = cerebro_mock({"texto_original": "continuá", "estado_del_ciclo": "mergeado"})
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    def test_continua_estado_mergeado_riesgo(self):
+        r = cerebro_mock({"texto_original": "continuá", "estado_del_ciclo": "mergeado"})
+        self.assertEqual(r["riesgo"], "bajo")
+
+    def test_uno_estado_mergeado_decision(self):
+        r = cerebro_mock({"texto_original": "1", "estado_del_ciclo": "mergeado"})
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    def test_uno_estado_mergeado_riesgo(self):
+        r = cerebro_mock({"texto_original": "1", "estado_del_ciclo": "mergeado"})
+        self.assertEqual(r["riesgo"], "bajo")
+
+    def test_mergeado_motivo_menciona_mergeado(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "mergeado"})
+        self.assertIn("mergeado", r["motivo"])
+
+    def test_mergeado_no_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "mergeado"})
+        self.assertFalse(r["requiere_ariel"])
+
+    def test_mergeado_requiere_torre(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "mergeado"})
+        self.assertTrue(r["requiere_torre"])
+
+    # Prioridad: reglas restrictivas ganan sobre los estados
+    def test_produccion_gana_sobre_suspendido(self):
+        r = cerebro_mock({"texto_original": "seguí y mandalo a producción", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_api_real_gana_sobre_mergeado(self):
+        r = cerebro_mock({"texto_original": "seguí y usá API real", "estado_del_ciclo": "mergeado"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_merge_gana_sobre_suspendido(self):
+        r = cerebro_mock({"texto_original": "seguí y mergealo", "estado_del_ciclo": "suspendido"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["riesgo"], "alto")
+
+    # Regresión: estado cerrado sigue funcionando
+    def test_segui_estado_cerrado_regresion_decision(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "cerrado"})
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    def test_segui_estado_cerrado_regresion_riesgo(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "cerrado"})
+        self.assertEqual(r["riesgo"], "bajo")
+
+
 if __name__ == "__main__":
     unittest.main()
