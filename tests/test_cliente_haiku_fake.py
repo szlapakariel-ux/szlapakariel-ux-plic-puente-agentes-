@@ -319,3 +319,130 @@ class TestClienteHaikuFakeAislamiento(unittest.TestCase):
     def test_no_importa_subprocess(self):
         import plic_puente_agentes.cliente_haiku_fake as mod
         self.assertNotIn("subprocess", dir(mod))
+
+
+class TestClienteHaikuFakeB06FalsosPositivos(unittest.TestCase):
+    """B-06 — falsos positivos corregidos: tissue/issue, tokenización/token,
+    continuamente/continua, secretaría/secret."""
+
+    # --- issue / tissue ---
+
+    def test_tissue_no_pide_autorizacion(self):
+        r = cliente_haiku_fake(_e(texto_original="no hay tissue aquí"))
+        self.assertNotEqual(r["decision"], "pedir_autorizacion")
+
+    def test_tissue_no_es_alto(self):
+        r = cliente_haiku_fake(_e(texto_original="no hay tissue aquí"))
+        self.assertNotEqual(r["riesgo"], "alto")
+
+    def test_issue_real_pide_autorizacion(self):
+        r = cliente_haiku_fake(_e(texto_original="comentar issue"))
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_github_issue_pide_autorizacion(self):
+        r = cliente_haiku_fake(_e(texto_original="github issue pendiente"))
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_issue_numero_pide_autorizacion(self):
+        r = cliente_haiku_fake(_e(texto_original="cerrá el issue #5"))
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["riesgo"], "alto")
+
+    # --- token / tokenización ---
+
+    def test_tokenizacion_no_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="tokenización del texto"))
+        self.assertNotEqual(r["decision"], "no_ejecutar")
+        self.assertFalse(r["bloqueo"])
+
+    def test_tokenizar_no_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="tokenizar texto"))
+        self.assertNotEqual(r["decision"], "no_ejecutar")
+        self.assertFalse(r["bloqueo"])
+
+    def test_usar_token_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="usar token"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+        self.assertTrue(r["bloqueo"])
+
+    def test_api_token_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="api token de acceso"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertTrue(r["bloqueo"])
+
+    def test_bearer_token_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="bearer token para auth"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertTrue(r["bloqueo"])
+
+    def test_token_solo_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="token"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertTrue(r["bloqueo"])
+
+    # --- continua / continuamente ---
+
+    def test_continuamente_no_continua_documental(self):
+        r = cliente_haiku_fake(_e(texto_original="revisar continuamente"))
+        self.assertNotEqual(r["decision"], "continuar_documental")
+
+    def test_continua_real_continua_documental(self):
+        r = cliente_haiku_fake(_e(texto_original="continua con el ciclo"))
+        self.assertEqual(r["decision"], "continuar_documental")
+        self.assertEqual(r["riesgo"], "bajo")
+
+    def test_continuar_real_continua_documental(self):
+        r = cliente_haiku_fake(_e(texto_original="continuar con el paso"))
+        self.assertEqual(r["decision"], "continuar_documental")
+        self.assertEqual(r["riesgo"], "bajo")
+
+    def test_continua_solo_continua_documental(self):
+        r = cliente_haiku_fake(_e(texto_original="continuá"))
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    # --- secret / secretaría ---
+
+    def test_secretaria_no_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="reunión de secretaría"))
+        self.assertNotEqual(r["decision"], "no_ejecutar")
+        self.assertFalse(r["bloqueo"])
+
+    def test_secretario_no_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="preguntá al secretario"))
+        self.assertNotEqual(r["decision"], "no_ejecutar")
+        self.assertFalse(r["bloqueo"])
+
+    def test_secret_solo_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="secret"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertTrue(r["bloqueo"])
+
+    def test_secrets_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="secrets del vault"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertTrue(r["bloqueo"])
+
+    def test_credencial_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="usá la credencial"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertTrue(r["bloqueo"])
+
+    def test_clave_bloquea(self):
+        r = cliente_haiku_fake(_e(texto_original="dame la clave"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertTrue(r["bloqueo"])
+
+    # --- prioridades: prohibido gana sobre continuidad ---
+
+    def test_segui_con_token_prohibido_gana(self):
+        r = cliente_haiku_fake(_e(texto_original="seguí y usar token"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_continua_con_api_key_prohibido_gana(self):
+        r = cliente_haiku_fake(_e(texto_original="continuá y api key"))
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")

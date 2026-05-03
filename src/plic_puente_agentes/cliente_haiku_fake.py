@@ -1,23 +1,50 @@
 _PROVEEDOR = "haiku_fake"
 _MODO = "fake_local_sin_api"
 
-_PALABRAS_PROHIBIDAS = (
+
+def _es_token(texto, token):
+    pos = texto.find(token)
+    while pos != -1:
+        antes = pos == 0 or not texto[pos - 1].isalpha()
+        despues = pos + len(token) >= len(texto) or not texto[pos + len(token)].isalpha()
+        if antes and despues:
+            return True
+        pos = texto.find(token, pos + 1)
+    return False
+
+
+# Palabras prohibidas usando detección por límite de palabra
+_PROHIBIDAS_TOKEN = (
+    "secret",
+    "token",
+)
+
+# Palabras prohibidas que son frases completas o no tienen problema de substring
+_PROHIBIDAS_FRASE = (
     "api real",
     "api key",
     "apikey",
     "api_key",
-    "secret",
-    "token",
+    "api token",
+    "bearer token",
+    "usar token",
     ".env",
     "produccion",
     "producción",
     "navegador",
     "playwright",
+    "credencial",
+    "clave",
+    "contraseña",
+    "secreto",
+    "secrets",
 )
 
-_PALABRAS_CONTINUIDAD = ("seguí", "segui", "continuá", "continua", "siguiente")
+_PALABRAS_CONTINUIDAD = ("seguí", "segui", "continuá", "continua", "siguiente", "continuar", "seguimos")
 
-_PALABRAS_MERGE = ("merge", " pr ", "pull request", "issue")
+# "issue" se detecta con límite de palabra para evitar "tissue"
+_MERGE_FRASE = ("merge", " pr ", "pull request")
+_MERGE_TOKEN = ("issue",)
 
 _PALABRAS_DELEGACION = (
     "pasalo a claude",
@@ -89,8 +116,21 @@ def cliente_haiku_fake(entrada):
             bloqueo=False,
         )
 
-    for palabra in _PALABRAS_PROHIBIDAS:
-        if palabra in texto_lower:
+    # Frases prohibidas exactas / sin problema de substring
+    for frase in _PROHIBIDAS_FRASE:
+        if frase in texto_lower:
+            return _salida(
+                decision="no_ejecutar",
+                riesgo="prohibido",
+                requiere_ariel=True,
+                requiere_torre=True,
+                motivo=f"Instrucción contiene término prohibido: '{frase}'. Bloqueado por contrato PUENTE-5A.",
+                bloqueo=True,
+            )
+
+    # Palabras prohibidas con detección por límite de palabra (B-06)
+    for palabra in _PROHIBIDAS_TOKEN:
+        if _es_token(texto_lower, palabra):
             return _salida(
                 decision="no_ejecutar",
                 riesgo="prohibido",
@@ -101,7 +141,7 @@ def cliente_haiku_fake(entrada):
             )
 
     for palabra in _PALABRAS_CONTINUIDAD:
-        if palabra in texto_lower:
+        if _es_token(texto_lower, palabra):
             return _salida(
                 decision="continuar_documental",
                 riesgo="bajo",
@@ -111,8 +151,19 @@ def cliente_haiku_fake(entrada):
                 bloqueo=False,
             )
 
-    for palabra in _PALABRAS_MERGE:
-        if palabra in texto_lower:
+    for frase in _MERGE_FRASE:
+        if frase in texto_lower:
+            return _salida(
+                decision="pedir_autorizacion",
+                riesgo="alto",
+                requiere_ariel=True,
+                requiere_torre=True,
+                motivo="Instrucción contiene término que requiere autorización explícita (merge, PR, issue). No se puede ejecutar sin revisión.",
+                bloqueo=False,
+            )
+
+    for palabra in _MERGE_TOKEN:
+        if _es_token(texto_lower, palabra):
             return _salida(
                 decision="pedir_autorizacion",
                 riesgo="alto",
