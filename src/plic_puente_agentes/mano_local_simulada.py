@@ -1,12 +1,18 @@
 """
-Mano Local Simulada — PUENTE-4B
+Mano Local Simulada — PUENTE-4C-BACKLOG
 Transforma decisiones del Cerebro Portero en acciones simuladas.
 Sin API real. Sin navegador. Sin I/O. Sin imports.
 """
 
 _PALABRAS_PELIGROSAS = (
-    "produccion", "producción", "prod", "secret", "secrets",
+    "produccion", "producción", "secret", "secrets",
     "token", "workflow", "navegador", "playwright", "api real",
+)
+_TOKENS_PELIGROSOS = ("prod",)
+
+_FRASES_PR = (
+    "pull request", "pull-request",
+    "abrir pr", "comentar pr", "cerrar pr",
 )
 
 _DECISIONES_BLOQUEO = ("no_ejecutar", "declarar_bloqueo")
@@ -23,9 +29,20 @@ _MAPA_DECISION = {
 _MAPA_ACCION_SUGERIDA = {
     "claude": ("preparar_prompt_claude", "claude_api"),
     "codex": ("preparar_prompt_codex", "codex_api"),
-    "issue": ("preparar_comentario_issue", "github_issue"),
-    "pr": ("preparar_comentario_pr", "github_pr"),
 }
+
+
+def _es_token(texto_lower, token):
+    """Verifica si token aparece como palabra completa en texto_lower."""
+    idx = texto_lower.find(token)
+    while idx != -1:
+        antes = idx == 0 or not texto_lower[idx - 1].isalpha()
+        despues = (idx + len(token) == len(texto_lower) or
+                   not texto_lower[idx + len(token)].isalpha())
+        if antes and despues:
+            return True
+        idx = texto_lower.find(token, idx + 1)
+    return False
 
 
 def mano_local_simulada(entrada: dict) -> dict:
@@ -72,8 +89,9 @@ def mano_local_simulada(entrada: dict) -> dict:
             "evidencia": evidencia_base,
         }
 
-    # Regla 9: palabras peligrosas en entrada bloquean
-    if any(p in texto for p in _PALABRAS_PELIGROSAS):
+    # Regla 9: palabras peligrosas y tokens peligrosos en entrada bloquean
+    if (any(p in texto for p in _PALABRAS_PELIGROSAS) or
+            any(_es_token(texto, t) for t in _TOKENS_PELIGROSOS)):
         return {
             "accion_simulada": "ninguna",
             "destino_simulado": "ninguno",
@@ -150,6 +168,30 @@ def mano_local_simulada(entrada: dict) -> dict:
                 "motivo": "payload simulado preparado — sin llamada a API ni accion externa real",
                 "evidencia": evidencia_base,
             }
+
+    if any(f in accion_lower for f in _FRASES_PR) or _es_token(accion_lower, "pr"):
+        return {
+            "accion_simulada": "preparar_comentario_pr",
+            "destino_simulado": "github_pr",
+            "payload_simulado": {"accion_sugerida": accion_sugerida, "decision": decision},
+            "resultado_simulado": "preparado",
+            "requiere_autorizacion": False,
+            "bloqueo": False,
+            "motivo": "payload simulado preparado — sin llamada a API ni accion externa real",
+            "evidencia": evidencia_base,
+        }
+
+    if _es_token(accion_lower, "issue"):
+        return {
+            "accion_simulada": "preparar_comentario_issue",
+            "destino_simulado": "github_issue",
+            "payload_simulado": {"accion_sugerida": accion_sugerida, "decision": decision},
+            "resultado_simulado": "preparado",
+            "requiere_autorizacion": False,
+            "bloqueo": False,
+            "motivo": "payload simulado preparado — sin llamada a API ni accion externa real",
+            "evidencia": evidencia_base,
+        }
 
     # Regla 4: reformular
     if decision_lower == "reformular":

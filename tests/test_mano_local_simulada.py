@@ -257,5 +257,82 @@ class TestManoLocalSimuladaAislamientoYRegresion(unittest.TestCase):
         self.assertEqual(r["riesgo"], "prohibido")
 
 
+class TestManoLocalFalsoPositivos(unittest.TestCase):
+    """PUENTE-4C-BACKLOG: verifica corrección de B-ML-01, B-ML-02, B-ML-03."""
+
+    # B-ML-01: "prod" no dispara en palabras que lo contienen internamente
+    def test_producir_documentacion_no_bloquea(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "producir documentacion del sistema"))
+        self.assertFalse(r["bloqueo"])
+        self.assertEqual(r["resultado_simulado"], "preparado")
+
+    def test_reproducir_el_caso_no_bloquea(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "reproducir el caso base"))
+        self.assertFalse(r["bloqueo"])
+
+    def test_revisar_producto_no_bloquea(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "revisar el producto final"))
+        self.assertFalse(r["bloqueo"])
+
+    # B-ML-01: disparadores reales de "prod" siguen bloqueando
+    def test_mandalo_a_prod_bloquea(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "mandalo a prod"))
+        self.assertTrue(r["bloqueo"])
+        self.assertEqual(r["resultado_simulado"], "bloqueado")
+
+    def test_entorno_prod_bloquea(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "entorno prod"))
+        self.assertTrue(r["bloqueo"])
+
+    def test_deploy_a_prod_bloquea(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "deploy a prod"))
+        self.assertTrue(r["bloqueo"])
+
+    # B-ML-02: "pr" no mapea en palabras que lo contienen internamente
+    def test_preparar_documento_no_mapea_pr(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "preparar el documento"))
+        self.assertNotEqual(r["accion_simulada"], "preparar_comentario_pr")
+        self.assertEqual(r["accion_simulada"], "preparar_orden_documental")
+
+    def test_comprimir_archivos_no_mapea_pr(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "comprimir archivos"))
+        self.assertNotEqual(r["accion_simulada"], "preparar_comentario_pr")
+
+    def test_propuesta_documental_no_mapea_pr(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "propuesta documental"))
+        self.assertNotEqual(r["accion_simulada"], "preparar_comentario_pr")
+
+    # B-ML-02: disparadores reales de PR siguen mapeando
+    def test_abrir_pr_mapea_pr(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "abrir pr de revision"))
+        self.assertEqual(r["accion_simulada"], "preparar_comentario_pr")
+        self.assertEqual(r["destino_simulado"], "github_pr")
+        self.assertFalse(r["bloqueo"])
+
+    def test_comentar_pr_mapea_pr(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "comentar pr"))
+        self.assertEqual(r["accion_simulada"], "preparar_comentario_pr")
+
+    def test_pull_request_mapea_pr(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "pull request de revision"))
+        self.assertEqual(r["accion_simulada"], "preparar_comentario_pr")
+        self.assertEqual(r["destino_simulado"], "github_pr")
+
+    def test_pr_aislado_mapea_pr(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "revisá el pr"))
+        self.assertEqual(r["accion_simulada"], "preparar_comentario_pr")
+
+    # B-ML-03: "issue" como token aislado mapea correctamente
+    def test_comentar_issue_mapea_issue(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "comentar issue"))
+        self.assertEqual(r["accion_simulada"], "preparar_comentario_issue")
+        self.assertEqual(r["destino_simulado"], "github_issue")
+        self.assertFalse(r["bloqueo"])
+
+    def test_github_issue_mapea_issue(self):
+        r = mano_local_simulada(_entrada("continuar_documental", "github issue #5"))
+        self.assertEqual(r["accion_simulada"], "preparar_comentario_issue")
+
+
 if __name__ == "__main__":
     unittest.main()
