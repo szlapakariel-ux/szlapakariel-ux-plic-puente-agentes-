@@ -1,13 +1,19 @@
 """
-Cerebro Portero Mock — PUENTE-3B
-Decisiones simuladas con evaluación de contexto_actual, estado_del_ciclo
-y autorizaciones_disponibles. Sin API real. Sin Claude Haiku. Sin I/O.
+Cerebro Portero Mock — PUENTE-3C-BACKLOG
+Corrección de falsos positivos para keywords ci/prod/action.
+Sin API real. Sin Claude Haiku. Sin I/O.
 """
 
 _PALABRAS_SECRETS = ("secret", "secrets", "token", "clave", "credencial", "contraseña", "password", "api key")
-_PALABRAS_PRODUCCION = ("producción", "produccion", "prod", "deploy", "publicar")
+_PALABRAS_PRODUCCION = ("producción", "produccion", "deploy", "publicar")
+_TOKENS_PRODUCCION = ("prod",)
 _PALABRAS_BORRAR = ("borrar", "eliminar", "force push", "reset hard")
-_PALABRAS_WORKFLOW = ("workflow", "github actions", "ci", "action")
+_PALABRAS_WORKFLOW = (
+    "workflow", "github actions", "github action",
+    "continuous integration", "integración continua",
+    "github ci", "ci pipeline", "action workflow", "actions workflow",
+)
+_TOKENS_WORKFLOW = ("ci",)
 _PALABRAS_NAVEGADOR = ("navegador", "playwright", "browser", "chromium")
 _PALABRAS_MERGE = ("merge", "mergealo", "cerrar pr", "aprobar pr")
 _PALABRAS_REPOS_REALES = ("sofse", "auditoria-sofse", "agente-saas", "torre-control")
@@ -19,6 +25,19 @@ _PALABRAS_ISSUE_COMENTAR = ("comentá el issue", "comenta el issue", "comentar i
 _PALABRAS_ISSUE_CERRAR = ("cerrá el issue", "cerrar el issue", "cerrar issue", "cerrá issue")
 
 _AUTORIZACIONES_PROHIBIDAS = frozenset({"puede_tocar_produccion", "puede_tocar_secrets"})
+
+
+def _es_token(texto_lower, token):
+    """Verifica si token aparece como palabra completa en texto_lower."""
+    idx = texto_lower.find(token)
+    while idx != -1:
+        antes = idx == 0 or not texto_lower[idx - 1].isalpha()
+        despues = (idx + len(token) == len(texto_lower) or
+                   not texto_lower[idx + len(token)].isalpha())
+        if antes and despues:
+            return True
+        idx = texto_lower.find(token, idx + 1)
+    return False
 
 
 def cerebro_mock(entrada: dict) -> dict:
@@ -78,7 +97,8 @@ def cerebro_mock(entrada: dict) -> dict:
         )
 
     # Prioridad 2 — producción / deploy
-    if any(p in texto_lower for p in _PALABRAS_PRODUCCION):
+    if (any(p in texto_lower for p in _PALABRAS_PRODUCCION) or
+            any(_es_token(texto_lower, t) for t in _TOKENS_PRODUCCION)):
         if "puede_tocar_produccion" in (entrada.get("autorizaciones_disponibles") or []):
             return _respuesta(
                 intencion="Acción sobre entorno de producción o deploy",
@@ -189,7 +209,8 @@ def cerebro_mock(entrada: dict) -> dict:
         )
 
     # Prioridad 7 — workflows / CI
-    if any(p in texto_lower for p in _PALABRAS_WORKFLOW):
+    if (any(p in texto_lower for p in _PALABRAS_WORKFLOW) or
+            any(_es_token(texto_lower, t) for t in _TOKENS_WORKFLOW)):
         return _respuesta(
             intencion="Acción relacionada con workflows o CI/CD",
             confianza="alta",

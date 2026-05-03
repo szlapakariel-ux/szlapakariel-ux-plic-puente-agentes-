@@ -478,5 +478,71 @@ class TestCerebroMockAutorizaciones(unittest.TestCase):
         self.assertEqual(r["riesgo"], "prohibido")
 
 
+class TestCerebroMockFalsoPositivos(unittest.TestCase):
+    """PUENTE-3C-BACKLOG: verifica que keywords cortas no generan falsos positivos."""
+
+    # B-01: "ci" no dispara en palabras españolas
+    def test_microciclo_no_dispara_workflow(self):
+        r = cerebro_mock({"texto_original": "el microciclo avanza"})
+        self.assertNotEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["decision"], "reformular")
+
+    def test_accion_documental_no_dispara_workflow(self):
+        r = cerebro_mock({"texto_original": "la acción documental está lista"})
+        self.assertNotEqual(r["riesgo"], "alto")
+        self.assertEqual(r["decision"], "reformular")
+
+    def test_servicio_activo_no_dispara_workflow(self):
+        r = cerebro_mock({"texto_original": "servicio activo"})
+        self.assertEqual(r["decision"], "reformular")
+
+    # B-02: "prod" no dispara en palabras como producto/producir/reproducir
+    def test_producto_no_dispara_produccion(self):
+        r = cerebro_mock({"texto_original": "revisá el producto"})
+        self.assertNotEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["decision"], "reformular")
+
+    def test_producir_documentacion_no_dispara_produccion(self):
+        r = cerebro_mock({"texto_original": "vamos a producir documentación"})
+        self.assertNotEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["decision"], "reformular")
+
+    def test_reproducir_no_dispara_produccion(self):
+        r = cerebro_mock({"texto_original": "reproducir el caso"})
+        self.assertNotEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["decision"], "reformular")
+
+    # Disparadores reales siguen funcionando
+    def test_activar_ci_dispara_workflow(self):
+        r = cerebro_mock({"texto_original": "activar CI"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_github_actions_dispara_workflow(self):
+        r = cerebro_mock({"texto_original": "github actions"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_crear_workflow_dispara_workflow(self):
+        r = cerebro_mock({"texto_original": "crear workflow"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_mandalo_a_prod_dispara_produccion(self):
+        r = cerebro_mock({"texto_original": "mandalo a prod"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_deploy_a_produccion_dispara_produccion(self):
+        r = cerebro_mock({"texto_original": "deploy a producción"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_entorno_prod_dispara_produccion(self):
+        r = cerebro_mock({"texto_original": "entorno prod"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+
 if __name__ == "__main__":
     unittest.main()
