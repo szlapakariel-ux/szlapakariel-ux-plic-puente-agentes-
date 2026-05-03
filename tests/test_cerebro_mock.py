@@ -293,5 +293,190 @@ class TestCerebroMockEstructuraSalida(unittest.TestCase):
             )
 
 
+class TestCerebroMockContextoEstado(unittest.TestCase):
+    """PUENTE-3B: evaluación de estado_del_ciclo en decisiones de continuidad."""
+
+    def test_segui_estado_cerrado_decision(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "cerrado"})
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    def test_segui_estado_cerrado_riesgo(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "cerrado"})
+        self.assertEqual(r["riesgo"], "bajo")
+
+    def test_segui_estado_pr_abierto_decision(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "pr_abierto"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_segui_estado_pr_abierto_riesgo(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "pr_abierto"})
+        self.assertEqual(r["riesgo"], "medio")
+
+    def test_segui_estado_pr_abierto_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "pr_abierto"})
+        self.assertTrue(r["requiere_ariel"])
+
+    def test_segui_estado_bloqueado_decision(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "bloqueado"})
+        self.assertEqual(r["decision"], "declarar_bloqueo")
+
+    def test_segui_estado_bloqueado_riesgo(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "bloqueado"})
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_segui_estado_bloqueado_requiere_ariel(self):
+        r = cerebro_mock({"texto_original": "seguí", "estado_del_ciclo": "bloqueado"})
+        self.assertTrue(r["requiere_ariel"])
+
+
+class TestCerebroMockContextoActual(unittest.TestCase):
+    """PUENTE-3B: evaluación de contexto_actual para opciones previas."""
+
+    def test_uno_con_opciones_previas_decision(self):
+        r = cerebro_mock({
+            "texto_original": "1",
+            "contexto_actual": {
+                "ultimo_output_portero": {
+                    "opciones_para_ariel": ["1) Continuar con docs", "2) Suspender"]
+                }
+            },
+        })
+        self.assertEqual(r["decision"], "continuar_documental")
+
+    def test_uno_con_opciones_previas_riesgo(self):
+        r = cerebro_mock({
+            "texto_original": "1",
+            "contexto_actual": {
+                "ultimo_output_portero": {
+                    "opciones_para_ariel": ["1) Continuar con docs"]
+                }
+            },
+        })
+        self.assertEqual(r["riesgo"], "bajo")
+
+    def test_uno_sin_opciones_previas_decision(self):
+        r = cerebro_mock({
+            "texto_original": "1",
+            "contexto_actual": {"ultimo_output_portero": None},
+        })
+        self.assertEqual(r["decision"], "reformular")
+
+    def test_uno_sin_opciones_previas_riesgo(self):
+        r = cerebro_mock({
+            "texto_original": "1",
+            "contexto_actual": {"ultimo_output_portero": None},
+        })
+        self.assertEqual(r["riesgo"], "medio")
+
+    def test_uno_sin_opciones_previas_requiere_ariel(self):
+        r = cerebro_mock({
+            "texto_original": "1",
+            "contexto_actual": {"ultimo_output_portero": None},
+        })
+        self.assertTrue(r["requiere_ariel"])
+
+
+class TestCerebroMockAutorizaciones(unittest.TestCase):
+    """PUENTE-3B: evaluación de autorizaciones_disponibles."""
+
+    def test_merge_sin_autorizacion_motivo_menciona_campo(self):
+        r = cerebro_mock({"texto_original": "mergealo a main"})
+        self.assertIn("puede_mergear", r["motivo"])
+
+    def test_merge_con_autorizacion_decision(self):
+        r = cerebro_mock({
+            "texto_original": "mergealo a main",
+            "autorizaciones_disponibles": ["puede_mergear"],
+        })
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_merge_con_autorizacion_riesgo(self):
+        r = cerebro_mock({
+            "texto_original": "mergealo a main",
+            "autorizaciones_disponibles": ["puede_mergear"],
+        })
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_comentar_issue_decision(self):
+        r = cerebro_mock({"texto_original": "comentá el issue"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_comentar_issue_riesgo(self):
+        r = cerebro_mock({"texto_original": "comentá el issue"})
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_cerrar_issue_decision(self):
+        r = cerebro_mock({"texto_original": "cerrá el issue"})
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_cerrar_issue_riesgo(self):
+        r = cerebro_mock({"texto_original": "cerrá el issue"})
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_api_real_sin_autorizacion_decision(self):
+        r = cerebro_mock({"texto_original": "usá API real"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+
+    def test_api_real_sin_autorizacion_riesgo(self):
+        r = cerebro_mock({"texto_original": "usá API real"})
+        self.assertEqual(r["riesgo"], "prohibido")
+
+    def test_api_real_con_autorizacion_decision(self):
+        r = cerebro_mock({
+            "texto_original": "usá API real",
+            "autorizaciones_disponibles": ["puede_usar_api_real"],
+        })
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_api_real_con_autorizacion_riesgo(self):
+        r = cerebro_mock({
+            "texto_original": "usá API real",
+            "autorizaciones_disponibles": ["puede_usar_api_real"],
+        })
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_produccion_con_autorizacion_decision(self):
+        r = cerebro_mock({
+            "texto_original": "mandalo a producción",
+            "autorizaciones_disponibles": ["puede_tocar_produccion"],
+        })
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_produccion_con_autorizacion_riesgo(self):
+        r = cerebro_mock({
+            "texto_original": "mandalo a producción",
+            "autorizaciones_disponibles": ["puede_tocar_produccion"],
+        })
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_secrets_con_autorizacion_decision(self):
+        r = cerebro_mock({
+            "texto_original": "usa el token",
+            "autorizaciones_disponibles": ["puede_tocar_secrets"],
+        })
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+
+    def test_secrets_con_autorizacion_riesgo(self):
+        r = cerebro_mock({
+            "texto_original": "usa el token",
+            "autorizaciones_disponibles": ["puede_tocar_secrets"],
+        })
+        self.assertEqual(r["riesgo"], "alto")
+
+    def test_sofse_con_repo_autorizado_distinto_motivo(self):
+        repo = "szlapakariel-ux/szlapakariel-ux-plic-puente-agentes-"
+        r = cerebro_mock({
+            "texto_original": "diagnóstico SOFSE",
+            "contexto_actual": {"repo_autorizado_actual": repo},
+        })
+        self.assertEqual(r["decision"], "pedir_autorizacion")
+        self.assertIn(repo, r["motivo"])
+
+    def test_api_real_gana_sobre_continuidad(self):
+        r = cerebro_mock({"texto_original": "seguí y usá API real"})
+        self.assertEqual(r["decision"], "no_ejecutar")
+        self.assertEqual(r["riesgo"], "prohibido")
+
+
 if __name__ == "__main__":
     unittest.main()
