@@ -1,20 +1,23 @@
 """
-Cerebro Portero Mock — PUENTE-1B
-Decisiones simuladas según contrato de PUENTE-1A.
+Cerebro Portero Mock — PUENTE-2B
+Decisiones simuladas según reglas PLIC documentadas en PUENTE-2A.
 Sin API real. Sin Claude Haiku. Sin conexiones externas.
 """
 
-_PALABRAS_PROHIBIDAS = ("producción", "produccion")
-_PALABRAS_SECRETS = ("secrets", "token", "clave", "credencial")
+_PALABRAS_SECRETS = ("secret", "secrets", "token", "clave", "credencial", "contraseña", "password", "api key")
+_PALABRAS_PRODUCCION = ("producción", "produccion", "prod", "deploy", "publicar")
+_PALABRAS_BORRAR = ("borrar", "eliminar", "force push", "reset hard")
+_PALABRAS_WORKFLOW = ("workflow", "github actions", "ci", "action")
+_PALABRAS_NAVEGADOR = ("navegador", "playwright", "browser", "chromium")
+_PALABRAS_MERGE = ("merge", "mergealo", "cerrar pr", "aprobar pr")
+_PALABRAS_REPOS_REALES = ("sofse", "auditoria-sofse", "agente-saas", "torre-control")
+_PALABRAS_SUSPENSION = ("suspender", "frenar", "parar")
+_PALABRAS_ANTICARTERO = ("pasalo a claude", "pasalo a codex", "mandalo a otro agente")
+_PALABRAS_CONTINUIDAD = ("seguí", "seguir", "continuá", "seguimos")
 
 
 def cerebro_mock(entrada: dict) -> dict:
-    """
-    Evalúa una intención de Ariel y devuelve una decisión estructurada.
-    Implementación mock con reglas hardcodeadas según contrato PUENTE-1A.
-    No llama a ninguna API. No abre conexiones. No ejecuta herramientas.
-    """
-    texto = entrada.get("texto_original", "")
+    texto = entrada.get("texto_original", "") if isinstance(entrada, dict) else ""
 
     if not isinstance(texto, str) or not texto.strip():
         return _respuesta(
@@ -31,21 +34,7 @@ def cerebro_mock(entrada: dict) -> dict:
 
     texto_lower = texto.lower()
 
-    # Regla 1 — producción: riesgo prohibido
-    if any(p in texto_lower for p in _PALABRAS_PROHIBIDAS):
-        return _respuesta(
-            intencion="Acción sobre entorno de producción",
-            confianza="alta",
-            riesgo="prohibido",
-            decision="no_ejecutar",
-            requiere_ariel=True,
-            requiere_torre=True,
-            accion=None,
-            opciones=[],
-            motivo="Producción es riesgo prohibido según reglas PLIC. No se ejecuta bajo ninguna circunstancia.",
-        )
-
-    # Regla 2 — secrets / tokens / credenciales: riesgo prohibido
+    # Prioridad 1 — secrets / credenciales: prohibido
     if any(p in texto_lower for p in _PALABRAS_SECRETS):
         return _respuesta(
             intencion="Acceso o manipulación de credenciales o secrets",
@@ -59,68 +48,106 @@ def cerebro_mock(entrada: dict) -> dict:
             motivo="Secrets y credenciales son prohibición absoluta según reglas PLIC. No se ejecuta.",
         )
 
-    # Regla 3 — "pasalo a Claude"
-    if "pasalo a claude" in texto_lower:
+    # Prioridad 2 — producción / deploy: prohibido
+    if any(p in texto_lower for p in _PALABRAS_PRODUCCION):
         return _respuesta(
-            intencion="Transferir contexto o tarea activa al agente Claude",
-            confianza="media",
-            riesgo="medio",
-            decision="reformular",
-            requiere_ariel=False,
+            intencion="Acción sobre entorno de producción o deploy",
+            confianza="alta",
+            riesgo="prohibido",
+            decision="no_ejecutar",
+            requiere_ariel=True,
             requiere_torre=True,
             accion=None,
             opciones=[],
-            motivo="La intención es reconocible pero Torre debe estructurar qué contexto transferir y en qué formato antes de que el ejecutor lo reciba.",
+            motivo="Producción y deploy son riesgo prohibido según reglas PLIC. No se ejecuta bajo ninguna circunstancia.",
         )
 
-    # Regla 4 — "1" (opción numérica)
-    if texto.strip() == "1":
+    # Prioridad 3 — borrar / force push / reset hard: prohibido
+    if any(p in texto_lower for p in _PALABRAS_BORRAR):
         return _respuesta(
-            intencion="Selección de opción 1 de la lista anterior del Portero",
+            intencion="Acción destructiva — borrado, eliminación o reset forzado",
             confianza="alta",
-            riesgo="bajo",
-            decision="continuar_documental",
-            requiere_ariel=False,
+            riesgo="prohibido",
+            decision="no_ejecutar",
+            requiere_ariel=True,
             requiere_torre=True,
-            accion="Continuar con la acción correspondiente a la opción 1 del contexto previo",
+            accion=None,
             opciones=[],
-            motivo="Respuesta numérica unívoca en contexto de opciones previas. Riesgo bajo. Acción clara.",
+            motivo="Borrar archivos y force push son prohibición absoluta según reglas PLIC.",
         )
 
-    # Regla 5 — "seguí con lo del celu"
-    if "seguí con lo del celu" in texto_lower or "segui con lo del celu" in texto_lower:
+    # Prioridad 4 — workflows / CI: alto
+    if any(p in texto_lower for p in _PALABRAS_WORKFLOW):
         return _respuesta(
-            intencion="Continuar microciclo activo relacionado con proyecto móvil/celular",
-            confianza="media",
-            riesgo="bajo",
-            decision="continuar_documental",
-            requiere_ariel=False,
-            requiere_torre=True,
-            accion="Retomar el microciclo activo vinculado al proyecto de celular según contexto previo",
-            opciones=[],
-            motivo="Intención de continuación reconocida. Riesgo bajo. Torre confirma contexto antes de ejecutar.",
-        )
-
-    # Regla 6 — SOFSE
-    if "sofse" in texto_lower:
-        return _respuesta(
-            intencion="Diagnóstico o acción sobre el proyecto SOFSE",
-            confianza="media",
+            intencion="Acción relacionada con workflows o CI/CD",
+            confianza="alta",
             riesgo="alto",
             decision="pedir_autorizacion",
             requiere_ariel=True,
             requiere_torre=True,
             accion=None,
             opciones=[
-                "1) Autorizar diagnóstico de solo lectura sobre SOFSE",
-                "2) Aclarar alcance del diagnóstico",
-                "3) Rechazar — no tocar SOFSE en este ciclo",
+                "1) Autorizar revisión de workflow en modo solo-lectura",
+                "2) Rechazar — sin tocar CI/CD en este ciclo",
+                "3) Escalar para definir microciclo específico de workflows",
             ],
-            motivo="SOFSE es un proyecto externo real con riesgo alto. Cualquier acción sobre él requiere autorización explícita de Ariel antes de continuar.",
+            motivo="Workflows y CI/CD requieren autorización explícita de Ariel antes de continuar.",
         )
 
-    # Regla 7 — suspender
-    if "suspender" in texto_lower:
+    # Prioridad 5 — navegador / Playwright: alto
+    if any(p in texto_lower for p in _PALABRAS_NAVEGADOR):
+        return _respuesta(
+            intencion="Acción que requiere navegador o Playwright",
+            confianza="alta",
+            riesgo="alto",
+            decision="pedir_autorizacion",
+            requiere_ariel=True,
+            requiere_torre=True,
+            accion=None,
+            opciones=[
+                "1) Autorizar uso de navegador en microciclo específico",
+                "2) Rechazar — sin navegador en este ciclo",
+            ],
+            motivo="Navegador y Playwright requieren ciclo específico autorizado.",
+        )
+
+    # Prioridad 6 — merge / PR: alto
+    if any(p in texto_lower for p in _PALABRAS_MERGE):
+        return _respuesta(
+            intencion="Acción de merge o gestión de PR",
+            confianza="alta",
+            riesgo="alto",
+            decision="pedir_autorizacion",
+            requiere_ariel=True,
+            requiere_torre=True,
+            accion=None,
+            opciones=[
+                "1) Autorizar merge con revisión previa",
+                "2) Rechazar — sin merge en este ciclo",
+            ],
+            motivo="Merge y PR requieren autorización explícita de Ariel antes de ejecutar.",
+        )
+
+    # Prioridad 7 — repos reales: alto
+    if any(p in texto_lower for p in _PALABRAS_REPOS_REALES):
+        return _respuesta(
+            intencion="Acción que involucra repositorio o proyecto real externo",
+            confianza="alta",
+            riesgo="alto",
+            decision="pedir_autorizacion",
+            requiere_ariel=True,
+            requiere_torre=True,
+            accion=None,
+            opciones=[
+                "1) Autorizar acción de solo-lectura sobre el proyecto mencionado",
+                "2) Rechazar — sin tocar repos externos en este ciclo",
+                "3) Escalar para definir microciclo específico",
+            ],
+            motivo="El texto involucra un repositorio o proyecto real externo. Requiere autorización explícita.",
+        )
+
+    # Prioridad 8 — suspensión: bajo
+    if any(p in texto_lower for p in _PALABRAS_SUSPENSION):
         return _respuesta(
             intencion="Solicitud de pausa o suspensión del ciclo activo",
             confianza="alta",
@@ -133,7 +160,35 @@ def cerebro_mock(entrada: dict) -> dict:
             motivo="Ariel solicitó suspender. Se pausa el ciclo activo hasta nueva instrucción.",
         )
 
-    # Regla 9 — default
+    # Prioridad 9 — anti-cartero: medio
+    if any(p in texto_lower for p in _PALABRAS_ANTICARTERO):
+        return _respuesta(
+            intencion="Transferencia directa a otro agente sin estructuración",
+            confianza="media",
+            riesgo="medio",
+            decision="reformular",
+            requiere_ariel=False,
+            requiere_torre=True,
+            accion=None,
+            opciones=[],
+            motivo="Torre debe reformular la intención antes de transferir para evitar que Ariel actúe como cartero.",
+        )
+
+    # Prioridad 10 — continuidad segura: bajo
+    if texto.strip() == "1" or any(p in texto_lower for p in _PALABRAS_CONTINUIDAD):
+        return _respuesta(
+            intencion="Continuación del ciclo activo",
+            confianza="alta",
+            riesgo="bajo",
+            decision="continuar_documental",
+            requiere_ariel=False,
+            requiere_torre=True,
+            accion="Continuar con el objetivo activo según contexto previo",
+            opciones=[],
+            motivo="Intención de continuación reconocida. Riesgo bajo. Torre confirma contexto antes de ejecutar.",
+        )
+
+    # Prioridad 12 — default: medio
     return _respuesta(
         intencion="Intención no clasificada por las reglas actuales del mock",
         confianza="baja",
