@@ -330,6 +330,74 @@ class TestClienteApiRealPreparadoCampos(unittest.TestCase):
         self.assertEqual(set(r.keys()), campos_esperados)
 
 
+class TestClienteApiRealPreparadoRequestId(unittest.TestCase):
+    def test_request_id_ausente_bloquea(self):
+        entrada = {k: v for k, v in _ENTRADA_BASE.items() if k != "request_id"}
+        r = cliente_api_real_preparado(entrada)
+        self.assertFalse(r["ok"])
+        self.assertTrue(r["bloqueo"])
+        self.assertEqual(r["error_tipo"], "request_id_invalido")
+
+    def test_request_id_vacio_bloquea(self):
+        r = cliente_api_real_preparado(_e(request_id=""))
+        self.assertFalse(r["ok"])
+        self.assertTrue(r["bloqueo"])
+        self.assertEqual(r["error_tipo"], "request_id_invalido")
+
+    def test_request_id_solo_espacios_bloquea(self):
+        r = cliente_api_real_preparado(_e(request_id="   "))
+        self.assertFalse(r["ok"])
+        self.assertTrue(r["bloqueo"])
+        self.assertEqual(r["error_tipo"], "request_id_invalido")
+
+    def test_request_id_none_bloquea(self):
+        r = cliente_api_real_preparado(_e(request_id=None))
+        self.assertFalse(r["ok"])
+        self.assertTrue(r["bloqueo"])
+        self.assertEqual(r["error_tipo"], "request_id_invalido")
+
+    def test_request_id_int_bloquea(self):
+        r = cliente_api_real_preparado(_e(request_id=123))
+        self.assertFalse(r["ok"])
+        self.assertTrue(r["bloqueo"])
+        self.assertEqual(r["error_tipo"], "request_id_invalido")
+
+    def test_request_id_bool_bloquea(self):
+        r = cliente_api_real_preparado(_e(request_id=True))
+        self.assertFalse(r["ok"])
+        self.assertTrue(r["bloqueo"])
+        self.assertEqual(r["error_tipo"], "request_id_invalido")
+
+    def test_request_id_valido_no_bloquea_por_este_motivo(self):
+        r = cliente_api_real_preparado(_e(request_id="req-001"))
+        self.assertNotEqual(r["error_tipo"], "request_id_invalido")
+
+    def test_request_id_valido_ok_true(self):
+        r = cliente_api_real_preparado(_e(request_id="req-001"))
+        self.assertTrue(r["ok"])
+
+    def test_request_id_valido_bloqueo_false(self):
+        r = cliente_api_real_preparado(_e(request_id="req-001"))
+        self.assertFalse(r["bloqueo"])
+
+    def test_request_id_invalido_bloqueo_true(self):
+        r = cliente_api_real_preparado(_e(request_id=""))
+        self.assertTrue(r["bloqueo"])
+
+    def test_request_id_invalido_ok_false(self):
+        r = cliente_api_real_preparado(_e(request_id=""))
+        self.assertFalse(r["ok"])
+
+    def test_request_id_valido_aparece_en_request_preparado(self):
+        r = cliente_api_real_preparado(_e(request_id="uuid-xyz-123"))
+        self.assertIsNotNone(r["request_preparado"])
+        self.assertEqual(r["request_preparado"]["request_id"], "uuid-xyz-123")
+
+    def test_request_id_invalido_motivo_menciona_trazabilidad(self):
+        r = cliente_api_real_preparado(_e(request_id=""))
+        self.assertIn("trazabilidad", r["motivo"])
+
+
 class TestClienteApiRealPreparadoAislamiento(unittest.TestCase):
     def test_no_importa_anthropic_sdk(self):
         import sys

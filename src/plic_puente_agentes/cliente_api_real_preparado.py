@@ -156,7 +156,14 @@ def cliente_api_real_preparado(entrada):
             modelo=modelo,
         )
 
-    request_id = entrada.get("request_id", "sin_request_id")
+    request_id = entrada.get("request_id", None)
+    if not isinstance(request_id, str) or not request_id.strip():
+        return _bloqueo(
+            error_tipo="request_id_invalido",
+            motivo="request_id es obligatorio para trazabilidad antes de cualquier futura llamada real. Debe ser un string no vacío.",
+            modelo=modelo,
+        )
+
     prompt_resumido = prompt_lower[:50] + "..." if len(prompt_lower) > 50 else prompt_lower
 
     # Estimación local de tokens: ~4 caracteres por token (sin tokenizer real)
