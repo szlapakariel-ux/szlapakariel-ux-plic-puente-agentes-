@@ -79,44 +79,11 @@ El campo `error.message` diría exactamente qué falló.
 
 ---
 
-## 6. Causas posibles ordenadas por probabilidad
+## 6. Causas posibles — hipótesis sin confirmar
 
-### Causa 1 — Alta probabilidad: profundidad de serialización de `ConvertTo-Json` en PowerShell
+**Nota de corrección (PUENTE-6D-400-DIAGNOSTICO-CORRECCION)**: Una versión previa de este documento afirmaba como "Causa 1 — Alta probabilidad" que `ConvertTo-Json` usó su profundidad por defecto (2), truncando el objeto anidado `messages[0]`. Esto era **incorrecto**: Ariel confirmó que el script ejecutado usó explícitamente `-Depth 10`. Esa hipótesis queda descartada. Todas las causas restantes son hipótesis sin confirmar. **La causa es INDETERMINADA hasta capturar el body del error.**
 
-**Descripción**: `ConvertTo-Json` en PowerShell tiene un parámetro `-Depth` que por defecto es **2**. El payload de Anthropic tiene esta estructura:
-
-```json
-{
-  "model": "claude-haiku-4-5-20251001",
-  "max_tokens": 16,
-  "temperature": 0,
-  "messages": [
-    {
-      "role": "user",
-      "content": "Respondé exactamente: PLIC_OK"
-    }
-  ]
-}
-```
-
-La profundidad máxima del objeto es 3 (raíz → `messages` → objeto dentro del array). Con `-Depth 2` (default), el objeto interno `{"role": ..., "content": ...}` puede quedar truncado o serializado como string `"@{role=user; content=...}"` en vez de un objeto JSON.
-
-**Ejemplo del problema**:
-```powershell
-# Incorrecto — depth por defecto puede truncar
-$body = $payload | ConvertTo-Json
-
-# Resultado posible truncado:
-# {"messages": ["@{role=user; content=Respondé exactamente: PLIC_OK}"]}
-# → Anthropic rechaza esto con 400
-```
-
-**Solución**: usar `-Depth 10` o al menos `-Depth 5`:
-```powershell
-$body = $payload | ConvertTo-Json -Depth 10
-```
-
-### Causa 2 — Alta probabilidad: `temperature` como entero en vez de float
+### Causa 1 — Sin confirmar: `temperature` como entero en vez de float
 
 **Descripción**: En algunos lenguajes y contextos, `temperature: 0` puede serializarse como entero `0` en vez de float `0.0`. La API de Anthropic espera un número de punto flotante para `temperature`.
 
@@ -136,7 +103,7 @@ La API de Anthropic generalmente acepta ambas formas, pero en algunos contextos 
 temperature = [double]0.0
 ```
 
-### Causa 3 — Media probabilidad: encoding incorrecto del body
+### Causa 2 — Sin confirmar: encoding incorrecto del body
 
 **Descripción**: `Invoke-RestMethod` en versiones antiguas de PowerShell puede enviar el body con encoding que no es UTF-8, especialmente en Windows con configuración regional no-inglesa. El servidor de Anthropic requiere UTF-8.
 
@@ -145,7 +112,7 @@ temperature = [double]0.0
 $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
 ```
 
-### Causa 4 — Media probabilidad: header `content-type` mal formado o ausente
+### Causa 3 — Sin confirmar: header `content-type` mal formado o ausente
 
 **Descripción**: Si el header `Content-Type` no tiene el valor exacto `application/json`, Anthropic puede rechazar la solicitud con 400.
 
@@ -154,13 +121,13 @@ $bodyBytes = [System.Text.Encoding]::UTF8.GetBytes($body)
 -ContentType "application/json"
 ```
 
-### Causa 5 — Baja probabilidad: modelo no disponible para la cuenta
+### Causa 4 — Sin confirmar: modelo no disponible para la cuenta
 
 **Descripción**: Es posible que `claude-haiku-4-5-20251001` no esté habilitado para la cuenta de la API key usada. Sin embargo, si fuera el caso, Anthropic generalmente devuelve un error específico (a veces 404, a veces 400 con `model_not_found`).
 
 **No se puede confirmar ni descartar** sin el body del error.
 
-### Causa 6 — Baja probabilidad: problema de proxy/firewall corporativo
+### Causa 5 — Sin confirmar: problema de proxy/firewall corporativo
 
 **Descripción**: Un proxy corporativo puede interceptar la solicitud, modificar headers, o devolver su propio error 400 antes de que llegue a Anthropic.
 
@@ -341,7 +308,7 @@ try {
 
 | Aspecto | Script anterior | Script mejorado |
 |---|---|---|
-| `ConvertTo-Json -Depth` | Default (2) — trunca objetos anidados | `-Depth 10` — serialización completa |
+| `ConvertTo-Json -Depth` | `-Depth 10` — correcto (no trunca) | `-Depth 10` — igual; no es cambio |
 | `temperature` | `0` (entero) | `[double]0.0` (float explícito) |
 | HTTP client | `Invoke-RestMethod` | `HttpWebRequest` — control total |
 | Encoding del body | Implícito | UTF-8 explícito |
@@ -383,12 +350,14 @@ El próximo reintento requiere:
 
 ## 12. Dictamen
 
-### **A) DIAGNÓSTICO 400 DOCUMENTADO — no reintentar sin nuevo microciclo**
+### **A) DIAGNÓSTICO 400 DOCUMENTADO — CAUSA INDETERMINADA — no reintentar sin nuevo microciclo**
 
-Sin el body del error no hay diagnóstico definitivo. La causa más probable es la profundidad de serialización de `ConvertTo-Json` (default `-Depth 2` trunca objetos anidados). La segunda causa más probable es `temperature` como entero. Ambas causas están resueltas en el script mejorado.
+Sin el body del error no hay diagnóstico definitivo. **La causa es INDETERMINADA.** Una hipótesis previa (truncado de `ConvertTo-Json` con depth por defecto) quedó descartada: el script de Ariel usó `-Depth 10` explícitamente.
+
+Las hipótesis restantes sin confirmar son: `temperature = 0` como entero en vez de float, encoding implícito en `Invoke-RestMethod`, header `content-type` mal formado, modelo no habilitado para la cuenta, o interferencia de red corporativa. Ninguna puede confirmarse ni descartarse sin el body del error.
 
 La red corporativa es una causa posible pero menos probable dado que el error fue 400 y no 407. Se recomienda probar desde red del celular para aislar esa variable.
 
-El script de la sección 9 corrige todas las causas de alta y media probabilidad y captura el body del error, lo que permitirá diagnóstico definitivo en el próximo reintento.
+El script de la sección 9 captura el body del error y corrige varias causas posibles (`temperature` como float, `HttpWebRequest` para control total de headers y encoding). Será el único dato que permita diagnóstico definitivo en el próximo reintento.
 
 > No ejecutar el script propuesto ni hacer ningún reintento hasta recibir autorización explícita separada de Ariel en un nuevo microciclo.
