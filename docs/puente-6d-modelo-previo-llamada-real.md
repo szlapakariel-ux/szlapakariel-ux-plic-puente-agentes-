@@ -1,5 +1,7 @@
 # PUENTE-6D-MODELO — Diagnóstico de modelo previo a primera llamada real
 
+> **ESTADO: RESUELTO** — Bloqueo resuelto en PUENTE-6D-MODELO-FIX. Modelo actualizado a `claude-haiku-4-5-20251001`.
+
 ## 1. Nombre del diagnóstico
 
 **PUENTE-6D-MODELO — Verificación del modelo permitido antes de primera llamada real a Anthropic**

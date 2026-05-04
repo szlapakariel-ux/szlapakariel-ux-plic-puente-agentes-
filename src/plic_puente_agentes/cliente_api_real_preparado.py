@@ -2,8 +2,7 @@ _PROVEEDOR = "anthropic_preparado"
 _MODO = "api_real_preparada_sin_llamada"
 
 _MODELOS_PERMITIDOS = (
-    "claude-3-5-haiku-latest",
-    "claude-3-haiku-20240307",
+    "claude-haiku-4-5-20251001",
 )
 
 _TIMEOUT_MAXIMO = 10

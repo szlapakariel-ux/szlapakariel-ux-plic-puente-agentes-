@@ -10,7 +10,7 @@ _ENTRADA_BASE = {
     "prompt": "Clasificá esta instrucción: revisar el documento.",
     "modo_seguro": True,
     "proveedor": "anthropic",
-    "modelo": "claude-3-5-haiku-latest",
+    "modelo": "claude-haiku-4-5-20251001",
     "timeout": 10,
     "max_tokens": 64,
     "request_id": "test-request-001",
@@ -212,13 +212,13 @@ class TestClienteApiRealPreparadoModelo(unittest.TestCase):
         self.assertTrue(r["bloqueo"])
         self.assertEqual(r["error_tipo"], "modelo_no_autorizado")
 
-    def test_modelo_haiku_latest_pasa(self):
-        r = cliente_api_real_preparado(_e(modelo="claude-3-5-haiku-latest"))
+    def test_modelo_haiku_4_5_pasa(self):
+        r = cliente_api_real_preparado(_e(modelo="claude-haiku-4-5-20251001"))
         self.assertNotEqual(r["error_tipo"], "modelo_no_autorizado")
 
-    def test_modelo_haiku_fecha_pasa(self):
+    def test_modelo_haiku_3_fecha_bloquea(self):
         r = cliente_api_real_preparado(_e(modelo="claude-3-haiku-20240307"))
-        self.assertNotEqual(r["error_tipo"], "modelo_no_autorizado")
+        self.assertEqual(r["error_tipo"], "modelo_no_autorizado")
 
 
 class TestClienteApiRealPreparadoTimeout(unittest.TestCase):
@@ -307,7 +307,7 @@ class TestClienteApiRealPreparadoCasoValido(unittest.TestCase):
         self.assertEqual(self.r["error_tipo"], "")
 
     def test_caso_valido_modelo_en_salida(self):
-        self.assertEqual(self.r["modelo"], "claude-3-5-haiku-latest")
+        self.assertEqual(self.r["modelo"], "claude-haiku-4-5-20251001")
 
 
 class TestClienteApiRealPreparadoCampos(unittest.TestCase):

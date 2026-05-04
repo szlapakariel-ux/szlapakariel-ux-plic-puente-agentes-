@@ -57,7 +57,7 @@
 
 ## Bloque 5 — Modelo
 
-- [ ] **5.1** El modelo es `claude-3-5-haiku-latest` o `claude-3-haiku-20240307` (únicos autorizados).
+- [ ] **5.1** El modelo es `claude-haiku-4-5-20251001` (único autorizado — actualizado en PUENTE-6D-MODELO-FIX).
 - [ ] **5.2** No se usa ningún otro modelo.
 - [ ] **5.3** El modelo fue verificado en el payload antes del envío.
 

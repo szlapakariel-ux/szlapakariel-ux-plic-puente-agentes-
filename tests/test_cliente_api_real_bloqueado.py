@@ -10,7 +10,7 @@ _ENTRADA_BASE = {
     "prompt": "Respondé exactamente: PLIC_OK",
     "modo_seguro": True,
     "proveedor": "anthropic",
-    "modelo": "claude-3-5-haiku-latest",
+    "modelo": "claude-haiku-4-5-20251001",
     "timeout": 10,
     "max_tokens": 50,
     "request_id": "test-request-gate-001",
@@ -365,7 +365,7 @@ class TestClienteApiRealBloqueadoCasoValido(unittest.TestCase):
         self.assertEqual(self.r["modo"], "llamada_real_bloqueada_por_defecto")
 
     def test_caso_valido_modelo_en_salida(self):
-        self.assertEqual(self.r["modelo"], "claude-3-5-haiku-latest")
+        self.assertEqual(self.r["modelo"], "claude-haiku-4-5-20251001")
 
     def test_caso_valido_request_id_en_salida(self):
         self.assertEqual(self.r["request_id"], "test-request-gate-001")
@@ -429,7 +429,7 @@ class TestClienteApiRealBloqueadoAislamiento(unittest.TestCase):
             "prompt": "clasificar documento",
             "modo_seguro": True,
             "proveedor": "anthropic",
-            "modelo": "claude-3-5-haiku-latest",
+            "modelo": "claude-haiku-4-5-20251001",
             "timeout": 5,
             "max_tokens": 64,
             "request_id": "test-aislamiento-001",
