@@ -83,7 +83,7 @@ Este microciclo:
 | Condición | Estado | Valor definido |
 |---|---|---|
 | Prompt futuro exacto definido | **OK** | `"Respondé exactamente: PLIC_OK"` — definido en PUENTE-6D-A sección 9 |
-| Modelo futuro permitido definido | **OK** | `claude-3-5-haiku-latest` — único modelo autorizado |
+| Modelo futuro permitido definido | **OK** | `claude-haiku-4-5-20251001` — único modelo autorizado (actualizado en PUENTE-6D-MODELO-FIX) |
 | `request_id` obligatorio definido | **OK** | String no vacío, único, sin datos sensibles |
 | `timeout` máximo futuro definido | **OK** | `<= 10` segundos |
 | `max_tokens` máximo futuro definido | **OK** | `<= 50` tokens |
@@ -131,7 +131,7 @@ Este microciclo:
 |---|---|
 | `request_id` propuesto | `PLIC-6D-REAL-001` (placeholder — generar UUID real en sesión de ejecución) |
 | Prompt exacto | `Respondé exactamente: PLIC_OK` |
-| Modelo exacto | `claude-3-5-haiku-latest` |
+| Modelo exacto | `claude-haiku-4-5-20251001` |
 | `timeout` | `10` segundos (límite máximo) |
 | `max_tokens` | `50` tokens (límite máximo) |
 | Nombre de variable de entorno | `ANTHROPIC_API_KEY` (solo el nombre — nunca el valor en este documento) |

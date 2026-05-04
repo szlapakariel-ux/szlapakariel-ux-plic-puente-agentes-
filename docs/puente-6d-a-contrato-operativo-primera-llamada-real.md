@@ -95,11 +95,10 @@ Antes de iniciar PUENTE-6D real, deben cumplirse **todas** estas condiciones:
 
 | Modelo | Estado |
 |---|---|
-| `claude-3-5-haiku-latest` | AUTORIZADO para primera llamada real |
-| `claude-3-haiku-20240307` | Autorizado como alternativa |
+| `claude-haiku-4-5-20251001` | AUTORIZADO para primera llamada real (actualizado en PUENTE-6D-MODELO-FIX) |
 | Cualquier otro modelo | PROHIBIDO en primera prueba |
 
-El modelo `claude-3-5-haiku-latest` es el más económico de la familia Claude 3.5 y el apropiado para una primera prueba mínima de conectividad.
+El modelo `claude-haiku-4-5-20251001` (Claude Haiku 4.5) es el modelo activo de la familia Haiku y el apropiado para una primera prueba mínima de conectividad. Los modelos anteriores `claude-3-5-haiku-latest` y `claude-3-haiku-20240307` fueron retirados por Anthropic.
 
 ---
 

@@ -3,7 +3,7 @@ _MODO = "llamada_real_bloqueada_por_defecto"
 
 _PROMPT_AUTORIZADO = "Respondé exactamente: PLIC_OK"
 _AUTORIZACION_VALIDA = "PUENTE-6D-B-SIN-LLAMADA-REAL"
-_MODELO_AUTORIZADO = "claude-3-5-haiku-latest"
+_MODELO_AUTORIZADO = "claude-haiku-4-5-20251001"
 _TIMEOUT_MAXIMO = 10
 _MAX_TOKENS_MAXIMO = 50
 
